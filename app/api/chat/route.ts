@@ -76,58 +76,96 @@ Never output any thinking, reasoning steps, analysis, or internal notes. Your re
 // ─────────────────────────────────────────────────────────────────────────────
 // Models — Only clean, non-thinking models
 // ─────────────────────────────────────────────────────────────────────────────
+// Models — confirmed working on OpenRouter free tier
 const MODELS_TO_TRY = [
   'meta-llama/llama-3.1-8b-instruct:free',
   'mistralai/mistral-7b-instruct:free',
-  'google/gemma-3-12b-it:free',
-  'microsoft/phi-3-mini-128k-instruct:free',
+  'qwen/qwen2.5-7b-instruct:free',
+  'google/gemma-2-9b-it:free'
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Clean response — strip any thinking leak
+// Clean response — strip ANY thinking leak (XML tags + nemotron inline prose)
 // ─────────────────────────────────────────────────────────────────────────────
 function cleanResponse(raw: string): string {
-  let text = raw;
+  let text = raw.trim();
 
-  // Remove XML thinking tags
+  // 1. Remove XML thinking tags
   text = text.replace(/<think>[\s\S]*?<\/think>/gi, '');
   text = text.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
 
-  // If model included an "Example response:" or "Final answer:" marker, take only what's after it
-  if (/example response:/i.test(text)) text = text.split(/example response:/i).pop()!;
-  if (/final answer:/i.test(text)) text = text.split(/final answer:/i).pop()!;
-  if (/my response:/i.test(text)) text = text.split(/my response:/i).pop()!;
-
-  // Strip markdown formatting
-  text = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s+/gm, '');
-  text = text.replace(/^[-–—]\s+/gm, ''); // remove leading dashes used as bullets
-  text = text.replace(/^\"|\"$/g, '');
-
-  // If the response starts with any reasoning pattern, skip to the first real sentence
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const thinkingStarters = [
-    /^here'?s?\s+(a\s+)?thinking/i,
-    /^let me (analyze|think|consider|reason|break)/i,
-    /^(step\s+)?\d+[\.:]\s+analyze/i,
-    /^check constraints/i,
-    /^analyze user input/i,
-    /^internal monologue/i,
-    /^reasoning:/i,
+  // 2. Hard split on explicit markers — take only what comes after
+  const splitMarkers = [
+    /example response:/i,
+    /final (?:response|answer):/i,
+    /my response:/i,
+    /actual response:/i,
+    /(?:so,?\s+)?(?:here is|here's) (?:my|the) (?:response|reply|answer):/i,
   ];
-
-  const firstCleanLine = lines.findIndex(line =>
-    !thinkingStarters.some(pat => pat.test(line)) &&
-    !/^\d+\.\s+(analyze|check|determine|consider)/i.test(line) &&
-    line.length > 15
-  );
-
-  if (firstCleanLine > 0) {
-    text = lines.slice(firstCleanLine).join(' ');
-  } else {
-    text = lines.join(' ');
+  for (const marker of splitMarkers) {
+    if (marker.test(text)) {
+      text = text.split(marker).pop()!.trim();
+      break;
+    }
   }
 
-  return text.trim();
+  // 3. Strip markdown
+  text = text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#{1,6}\s+/gm, '');
+  text = text.replace(/^[-–—]\s+/gm, '');
+  text = text.replace(/^\"|\"$/g, '');
+
+  // 4. Handle nemotron's inline prose reasoning:
+  //    It writes a long block of reasoning then puts the real reply at the end.
+  //    Strategy: split into sentences, find where "real reply" begins.
+  //    Real reply sentences do NOT contain meta-phrases like:
+  //    "According to my instructions", "The user said", "I should respond",
+  //    "Let me craft", "I need to", "I must", "I'll respond", etc.
+  const META_PHRASES = [
+    /according to my instructions/i,
+    /the user said/i,
+    /i should respond/i,
+    /let me craft/i,
+    /i need to (follow|respond|stay|maintain|make)/i,
+    /i must (not|stay|maintain|follow)/i,
+    /i'll (respond|craft|make|say)/i,
+    /key points from/i,
+    /my instructions/i,
+    /check constraints/i,
+    /determine response/i,
+    /draft:/i,
+    /looking at the rules/i,
+    /this is a greeting/i,
+    /i should (not|avoid|use|write|start|begin)/i,
+    /personality guidelines/i,
+    /let me think about/i,
+    /actually,? looking at/i,
+  ];
+
+  // Split on sentence boundaries
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 5);
+
+  // Find the first sentence that has NO meta-phrases and is short/natural
+  const cleanStart = sentences.findIndex(
+    s => !META_PHRASES.some(p => p.test(s)) && s.length < 300
+  );
+
+  if (cleanStart > 0) {
+    // Take from first clean sentence onwards, but also drop any remaining meta sentences
+    const cleanSentences = sentences.slice(cleanStart).filter(
+      s => !META_PHRASES.some(p => p.test(s))
+    );
+    text = cleanSentences.join(' ').trim();
+  }
+
+  // 5. Final trim + collapse whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  // Remove wrapping quotes if model wrapped the reply in them
+  if (text.startsWith('"') && text.endsWith('"')) text = text.slice(1, -1).trim();
+
+  return text;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
