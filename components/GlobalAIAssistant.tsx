@@ -10,12 +10,12 @@ export default function GlobalAIAssistant() {
   const [inputValue, setInputValue] = useState('');
   
   const { messages, isTyping, sendMessage, isPage7Visible } = useChat();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages, isTyping, isExpanded]);
 
@@ -120,7 +120,7 @@ export default function GlobalAIAssistant() {
               </div>
 
               {/* CHAT AREA */}
-              <div className="flex-grow overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar">
+              <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar">
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'self-end items-end' : 'self-start items-start'}`}>
                     <span className="text-[9px] uppercase tracking-widest font-beausite text-white/30 mb-1.5">
@@ -142,8 +142,7 @@ export default function GlobalAIAssistant() {
                     </div>
                   </div>
                 )}
-                <div ref={messagesEndRef} />
-              </div>
+                              </div>
 
               {/* INPUT AREA */}
               <form onSubmit={handleSubmit} className="shrink-0 p-4 border-t border-white/5 bg-white/[0.02]">
@@ -173,6 +172,7 @@ export default function GlobalAIAssistant() {
     </AnimatePresence>
   );
 }
+
 
 
 

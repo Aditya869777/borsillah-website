@@ -3,6 +3,7 @@ import "./globals.css";
 import CookieBanner from '@/components/CookieBanner';
 import { ChatProvider } from '@/components/ChatContext';
 import LenisWrapper from '@/components/LenisWrapper';
+import Preloader from '@/components/Preloader';
 import type { Metadata, Viewport } from 'next';
 import GlobalAIAssistant from '@/components/GlobalAIAssistant';
 
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body suppressHydrationWarning className="font-playfair font-sans">
         <ChatProvider>
           <LenisWrapper>
+          <Preloader />
         {children}
         <CookieBanner />
         <GlobalAIAssistant />
@@ -67,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
 
 
 

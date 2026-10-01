@@ -9,11 +9,11 @@ export default function Page7Contact() {
   const { messages, isTyping, sendMessage, setIsPage7Visible } = useChat();
   useEffect(() => { setIsPage7Visible(isInView); }, [isInView, setIsPage7Visible]);
   const [inputValue, setInputValue] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages, isTyping]);
 
@@ -87,7 +87,7 @@ export default function Page7Contact() {
             </div>
 
             {/* Chat Area */}
-            <div className="flex-grow overflow-y-auto p-8 flex flex-col gap-8 custom-scrollbar">
+            <div ref={chatContainerRef} className="flex-grow overflow-y-auto p-8 flex flex-col gap-8 custom-scrollbar">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'self-end items-end' : 'self-start items-start'}`}>
                   <span className="text-[10px] uppercase tracking-[0.2em] font-beausite text-[#1A1A24]/30 mb-2">
@@ -109,8 +109,7 @@ export default function Page7Contact() {
                   </div>
                 </div>
               )}
-              <div ref={messagesEndRef} />
-            </div>
+                          </div>
 
             {/* Input Area */}
             <form onSubmit={handleSubmit} className="shrink-0 p-6 border-t border-[#1A1A24]/10 bg-[#1A1A24]/[0.05]">
@@ -171,6 +170,7 @@ export default function Page7Contact() {
     </section>
   );
 }
+
 
 
 
