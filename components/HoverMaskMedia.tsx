@@ -50,10 +50,18 @@ export default function HoverMaskMedia({
     current.current.x = rect.width / 2;
     current.current.y = rect.height / 2;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
       const bcr = container.getBoundingClientRect();
-      target.current.x = e.clientX - bcr.left;
-      target.current.y = e.clientY - bcr.top;
+      let clientX, clientY;
+      if ('touches' in e) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      target.current.x = clientX - bcr.left;
+      target.current.y = clientY - bcr.top;
     };
 
     const handleMouseEnter = () => {
@@ -65,8 +73,11 @@ export default function HoverMaskMedia({
     };
 
     container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('touchmove', handleMouseMove, { passive: false });
     container.addEventListener('mouseenter', handleMouseEnter);
+    container.addEventListener('touchstart', handleMouseEnter, { passive: false });
     container.addEventListener('mouseleave', handleMouseLeave);
+    container.addEventListener('touchend', handleMouseLeave);
 
     const loop = () => {
       const dt = 16.66; // approx 60fps delta
@@ -107,8 +118,11 @@ export default function HoverMaskMedia({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('touchmove', handleMouseMove);
       container.removeEventListener('mouseenter', handleMouseEnter);
+      container.removeEventListener('touchstart', handleMouseEnter);
       container.removeEventListener('mouseleave', handleMouseLeave);
+      container.removeEventListener('touchend', handleMouseLeave);
     };
   }, [followStrength, maskSize]);
 
@@ -176,3 +190,5 @@ export default function HoverMaskMedia({
     </div>
   );
 }
+
+
