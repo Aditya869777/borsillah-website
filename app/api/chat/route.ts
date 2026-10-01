@@ -229,7 +229,6 @@ export async function POST(req: Request) {
     // All models exhausted
     return NextResponse.json({
       content: "Apologies — our system is experiencing unusually high demand right now. Please reach out directly at partnerships@borsillah.com and we'll get back to you within 48 hours.",
-      debug: lastError?.message || 'unknown error'
     });
 
   } catch (error: any) {
