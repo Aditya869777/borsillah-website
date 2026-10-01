@@ -1,39 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLanguage } from "@/components/LanguageProvider";
 
-// Vertical dots fixed to the right edge that highlight the current section
-// using the same `data-kb-section` markers the 3D scene already observes.
-// Click a dot → smooth scroll (Lenis is wrapping the document, so a regular
-// scrollIntoView gets intercepted and animated by Lenis). Hidden on small
-// screens to avoid crowding the keyboard.
 export default function SectionNav() {
   const [active, setActive] = useState<string>("hero");
-  const { t } = useLanguage();
 
   const SECTIONS = [
-    { id: "hero", label: t("nav.home") },
-    { id: "stack", label: t("nav.stack") },
-    { id: "experience", label: t("nav.experience") },
-    { id: "project1", label: `${t("nav.project")} 01` },
-    { id: "project2", label: `${t("nav.project")} 02` },
-    { id: "project3", label: `${t("nav.project")} 03` },
-    { id: "project4", label: `${t("nav.project")} 04` },
-    { id: "contact", label: t("nav.contact") },
+    { id: "hero", label: "Hero" },
+    { id: "product", label: "Product" },
+    { id: "story", label: "Brand" },
+    { id: "vision", label: "Vision" },
+    { id: "culture", label: "Culture" },
+    { id: "global", label: "Global" },
+    { id: "future", label: "Future" },
+    { id: "close", label: "Close" },
   ];
 
   useEffect(() => {
-    const ids = [
-      "hero",
-      "stack",
-      "experience",
-      "project1",
-      "project2",
-      "project3",
-      "project4",
-      "contact",
-    ];
+    const ids = SECTIONS.map(s => s.id);
     const els = ids.map((id) =>
       document.querySelector<HTMLElement>(`[data-kb-section="${id}"]`)
     );
@@ -63,7 +47,7 @@ export default function SectionNav() {
 
   return (
     <nav
-      aria-label={t("nav.aria")}
+      aria-label="Sections"
       className="hidden md:flex fixed right-6 top-1/2 -translate-y-1/2 z-40 flex-col gap-3 pointer-events-auto"
     >
       {SECTIONS.map((s) => {
@@ -79,7 +63,7 @@ export default function SectionNav() {
             aria-current={isActive ? "true" : undefined}
           >
             <span
-              className={`text-[10px] uppercase tracking-[0.25em] text-ice-200 transition-all duration-300 ${
+              className={`text-[10px] uppercase tracking-[0.25em] text-gray-300 transition-all duration-300 ${
                 isActive
                   ? "opacity-100 -translate-x-1"
                   : "opacity-0 translate-x-2 group-hover:opacity-80 group-hover:translate-x-0"
@@ -90,8 +74,8 @@ export default function SectionNav() {
             <span
               className={`block rounded-full transition-all duration-300 ${
                 isActive
-                  ? "w-2.5 h-2.5 bg-ice-100 shadow-[0_0_12px_rgba(234,242,251,0.6)]"
-                  : "w-1.5 h-1.5 bg-ice-500/60 group-hover:bg-ice-200"
+                  ? "w-2.5 h-2.5 bg-[#cc4433] shadow-[0_0_12px_rgba(204,68,51,0.6)]"
+                  : "w-1.5 h-1.5 bg-gray-500/60 group-hover:bg-gray-200"
               }`}
             />
           </button>

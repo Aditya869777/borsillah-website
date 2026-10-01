@@ -1,83 +1,75 @@
-import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cormorant_Garamond, DM_Mono, Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import CustomCursor from "@/components/CustomCursor";
-import FrozenBackground from "@/components/FrozenBackground";
-import ScrollProgress from "@/components/ScrollProgress";
-import MagneticTargets from "@/components/MagneticTargets";
-import SeasonProvider, {
-  SEASON_BOOT_SCRIPT,
-} from "@/components/SeasonProvider";
-import LanguageProvider, {
-  LANG_BOOT_SCRIPT,
-} from "@/components/LanguageProvider";
+import CookieBanner from '@/components/CookieBanner';
+import { ChatProvider } from '@/components/ChatContext';
+import LenisWrapper from '@/components/LenisWrapper';
+import type { Metadata, Viewport } from 'next';
+import GlobalAIAssistant from '@/components/GlobalAIAssistant';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const playfair = Playfair_Display({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-playfair",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-serif",
+});
+
+const dmMono = DM_Mono({
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  variable: "--font-mono",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
 });
 
 export const metadata: Metadata = {
-  title: "Txema Albero — Software Engineer & Tech Lead",
-  description:
-    "Portfolio inmersivo de Txema Albero — Software Engineer / Tech Lead. Experiencias web 3D con Next.js y React Three Fiber.",
-  authors: [{ name: "Txema Albero" }],
+  title: "Borsillah - From Assam to a Bigger Cup of Ambition",
+  description: "Borsillah - an immersive brand story for an Assam CTC tea company. Premium tea, ambitious vision, built for scale.",
+  authors: [{ name: "Borsillah" }],
   openGraph: {
-    title: "Txema Albero — Software Engineer & Tech Lead",
-    description:
-      "Portfolio inmersivo con escena 3D interactiva. Next.js, React Three Fiber, GLSL.",
+    title: "Borsillah - From Assam to a Bigger Cup of Ambition",
+    description: "Premium Assam CTC Tea. An immersive brand story.",
     type: "website",
-    locale: "es_ES",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Txema Albero — Software Engineer & Tech Lead",
-    description:
-      "Portfolio inmersivo con escena 3D interactiva. Next.js, React Three Fiber, GLSL.",
+    locale: "en_IN",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#060e1c",
+  themeColor: "#0d0b08",
   colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      suppressHydrationWarning
+    <html 
+      lang="en" 
+      suppressHydrationWarning 
+      className={`${playfair.variable} ${cormorant.variable} ${dmMono.variable} ${inter.variable}`}
     >
-      <head>
-        {/* Run synchronously before hydration to apply the user's stored
-            season + language — avoids a flash of the default values. */}
-        <script dangerouslySetInnerHTML={{ __html: SEASON_BOOT_SCRIPT }} />
-        <script dangerouslySetInnerHTML={{ __html: LANG_BOOT_SCRIPT }} />
-      </head>
-      <body
-        className="min-h-full flex flex-col"
-        suppressHydrationWarning
-      >
-        <LanguageProvider>
-          <SeasonProvider>
-            <FrozenBackground />
-            <ScrollProgress />
-            {children}
-            <CustomCursor />
-            <MagneticTargets />
-          </SeasonProvider>
-        </LanguageProvider>
+      <body suppressHydrationWarning className="font-playfair font-sans">
+        <ChatProvider>
+          <LenisWrapper>
+        {children}
+        <CookieBanner />
+        <GlobalAIAssistant />
+        </LenisWrapper>
+        </ChatProvider>
       </body>
     </html>
   );
 }
+
+
+
+
+
+

@@ -66,3 +66,11 @@ cv_opcion_b_en.pdf
 
 # Conversation context / personal notes
 CONVERSATION_CONTEXT.txt
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
