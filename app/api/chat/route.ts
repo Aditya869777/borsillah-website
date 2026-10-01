@@ -26,10 +26,11 @@ TONE & BEHAVIOR:
 
 // Priority list of free OpenRouter models
 const MODELS_TO_TRY = [
-  'openrouter/free',
+  'meta-llama/llama-3.1-8b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
   'nvidia/nemotron-3.5-lightning:free',
   'qwen/qwen3.8-27b:free',
-  'openrouter/free'
+  'openrouter/free',
 ];
 
 export async function POST(req: Request) {
@@ -38,7 +39,10 @@ export async function POST(req: Request) {
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'OpenRouter API Key not configured.' }, { status: 500 });
+      return NextResponse.json({ 
+        content: 'Welcome to Borsillah. Our AI is warming up — please try again in a moment.',
+        model_used: 'fallback'
+      });
     }
 
     // Prepend system prompt
@@ -58,38 +62,40 @@ export async function POST(req: Request) {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': 'http://localhost:3000', // Update with actual domain later
+            'HTTP-Referer': 'https://borsillah-website.vercel.app',
             'X-Title': 'Borsillah B2B AI',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             model: model,
             messages: fullMessages,
-            temperature: 0.2, // Keep it professional and factual
+            temperature: 0.2,
             max_tokens: 300,
           }),
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
         }
 
         const data = await response.json();
-        let finalContent = data.choices[0].message?.content || '';
+        let finalContent = data.choices?.[0]?.message?.content || '';
         
         // Cleanup thought blocks from some models
-        if (finalContent) { finalContent = finalContent.replace(/<think>[\s\S]*?<\/think>/g, ''); }
-        if (finalContent && finalContent.includes('Example response:')) {
-            finalContent = finalContent.split('Example response:')[1].trim();
+        finalContent = finalContent.replace(/<think>[\s\S]*?<\/think>/g, '');
+        finalContent = finalContent.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#{1,6}\s/g, '');
+        if (finalContent.includes('Example response:')) {
+          finalContent = finalContent.split('Example response:')[1].trim();
         }
-        if (finalContent && finalContent.includes('thinking process:')) {
-            // Nemotron might not have a clear end to its thinking block. We rely on Example response or just returning as is.
-        }
-        
-        finalContent = finalContent.replace(/^"|"$/g, '').trim();
+        finalContent = finalContent.replace(/^\"|\"$/g, '').trim();
 
-        // Success! Return the response
+        // Skip empty responses and try next model
+        if (!finalContent || finalContent.length < 5) {
+          throw new Error('Empty response from model');
+        }
+
+        // Success!
         return NextResponse.json({
           content: finalContent,
           model_used: model
@@ -98,18 +104,19 @@ export async function POST(req: Request) {
       } catch (err: any) {
         console.error(`Failed with model ${model}:`, err.message);
         lastError = err;
-        // Continue to the next model in the loop
       }
     }
 
     // If we exhaust all models
     return NextResponse.json({ 
-      error: 'All available AI models are currently overwhelmed. Please try again in a few moments.',
-      details: lastError?.message
-    }, { status: 503 });
+      content: 'Our tea experts are momentarily unavailable. Please try again shortly — we look forward to speaking with you.',
+    }, { status: 200 });
 
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ 
+      content: 'Something went wrong. Please try again.',
+      error: error.message 
+    }, { status: 200 });
   }
 }
 

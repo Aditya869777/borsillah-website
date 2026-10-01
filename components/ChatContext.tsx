@@ -39,11 +39,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
       });
 
-      if (!response.ok) throw new Error('Network response was not ok');
-
       const data = await response.json();
       
-      setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+      const reply = data.content || 'Our tea consultants are momentarily indisposed. Please try again shortly.';
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, { role: 'assistant', content: 'I am currently experiencing a high volume of requests. Please try again shortly.' }]);
