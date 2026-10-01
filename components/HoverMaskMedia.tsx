@@ -29,11 +29,35 @@ export default function HoverMaskMedia({
   const isVideo = revealMedia.toLowerCase().endsWith('.mp4') || revealMedia.toLowerCase().endsWith('.webm');
   
   const [isTouch, setIsTouch] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const isVisibleRef = useRef(false);
+
+  const baseVideoRef = useRef<HTMLVideoElement>(null);
+  const revealVideoRef = useRef<HTMLVideoElement>(null);
 
   // Physics state
   const target = useRef({ x: 0, y: 0, active: 0 }); // active 0..1 (fades in/out)
   const current = useRef({ x: 0, y: 0, active: 0, velX: 0, velY: 0 });
   const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisibleRef.current = entry.isIntersecting;
+      setIsVisible(entry.isIntersecting);
+    }, { rootMargin: '200px' });
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const playOrPause = (vid: HTMLVideoElement | null) => {
+      if (!vid) return;
+      if (isVisible) vid.play().catch(() => {});
+      else vid.pause();
+    };
+    playOrPause(baseVideoRef.current);
+    playOrPause(revealVideoRef.current);
+  }, [isVisible]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -80,6 +104,10 @@ export default function HoverMaskMedia({
     container.addEventListener('touchend', handleMouseLeave);
 
     const loop = () => {
+      if (!isVisibleRef.current) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
       const dt = 16.66; // approx 60fps delta
       
       // Lerp positions
@@ -142,7 +170,7 @@ export default function HoverMaskMedia({
       {baseMedia && (
         <div className="absolute inset-0 z-0 flex items-center justify-center">
           {baseMedia.endsWith('.mp4') ? (
-            <video src={baseMedia} autoPlay loop muted playsInline className="w-full h-full object-cover scale-[1.05]" style={baseFilter ? { filter: baseFilter } : undefined} />
+            <video ref={baseVideoRef} src={baseMedia} loop muted playsInline preload={isVisible ? 'auto' : 'metadata'} className="w-full h-full object-cover scale-[1.05]" style={baseFilter ? { filter: baseFilter } : undefined} />
           ) : (
             <img src={baseMedia} alt="Base" className="w-full h-full object-cover scale-[1.05]" style={baseFilter ? { filter: baseFilter } : undefined} />
           )}
@@ -170,11 +198,12 @@ export default function HoverMaskMedia({
       >
         {isVideo ? (
           <video 
+            ref={revealVideoRef}
             src={revealMedia} 
-            autoPlay 
             loop 
             muted 
             playsInline 
+            preload={isVisible ? 'auto' : 'metadata'}
             className="w-full h-full object-cover scale-[1.05]"
             style={{ filter: 'contrast(1.25) saturate(1.3) brightness(1.05)' }}
           />

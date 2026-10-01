@@ -1,13 +1,12 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import Page3CupScrubber from '@/components/Page3CupScrubber';
-import AnimatedBackground from '@/components/AnimatedBackground';
-import LiquidFluid from '@/components/LiquidFluid';
-import ChameleonBackground from '@/components/ChameleonBackground';
+import dynamic from 'next/dynamic';
 import HoverMaskMedia from '@/components/HoverMaskMedia';
 import ImageScroller from '@/components/ImageScroller';
-import Page6Business from '@/components/Page6Business';
-import Page7Contact from '@/components/Page7Contact';
+
+const Page3CupScrubber = dynamic(() => import('@/components/Page3CupScrubber'), { ssr: false });
+const Page6Business = dynamic(() => import('@/components/Page6Business'), { ssr: false });
+const Page7Contact = dynamic(() => import('@/components/Page7Contact'), { ssr: false });
 
 export default function Home() {
   const bgCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -20,12 +19,12 @@ export default function Home() {
   const [loadedCount, setLoadedCount] = useState(0);
   const [displayFrame, setDisplayFrame] = useState(1);
   const [detectedHz, setDetectedHz] = useState<number>(0);
-  const [liveFps, setLiveFps] = useState<number>(0);
+
   const [isPastPage2, setIsPastPage2] = useState(false);
   const totalFramesCount = 600; // 330 (Video 1) + 270 (Video 2)
 
   // References for frames and physics loop
-  const framesRef = useRef<HTMLImageElement[]>([]);
+  const framesRef = useRef<Map<number, HTMLImageElement>>(new Map());
   const targetProgressRef = useRef(0);
   const currentProgressRef = useRef(0);
   const animFrameIdRef = useRef<number | null>(null);
@@ -42,7 +41,7 @@ export default function Home() {
     if (!bgCanvas || !scrubberCanvas) return;
 
     const bgCtx = bgCanvas.getContext('2d');
-    const scrubCtx = scrubberCanvas.getContext('2d', { willReadFrequently: true });
+    const scrubCtx = scrubberCanvas.getContext('2d');
     if (!bgCtx || !scrubCtx) return;
 
     // Retina-sharp Canvas Resize
@@ -93,7 +92,7 @@ export default function Home() {
 
     // Main Scene Render: Maps progress -> Cup Position + Frame Index (Video 1 -> Video 2)
     const renderScene = (progress: number) => {
-      if (!scrubCtx || framesRef.current.length === 0) return;
+      if (!scrubCtx || framesRef.current.size === 0) return;
 
       const scale = Math.max(width / 1920, height / 1080) * 0.82;
       const drawWidth = 1920 * scale;
@@ -136,7 +135,7 @@ export default function Home() {
       // Display frame is strictly between 1 and 600
       setDisplayFrame(Math.min(totalFramesCount, frameIndex + 1));
 
-      const img = framesRef.current[frameIndex];
+      const img = framesRef.current.get(frameIndex);
       if (!img || !img.complete || img.naturalWidth === 0) return;
 
       scrubCtx.clearRect(0, 0, width, height);
@@ -190,31 +189,76 @@ export default function Home() {
 
     let isCancelled = false;
     let initialDrawn = false;
-    const imgElements: HTMLImageElement[] = new Array(framePaths.length);
-    framesRef.current = imgElements;
+    framesRef.current.clear();
 
     let loaded = 0;
-    framePaths.forEach((path, idx) => {
+    const loadingSet = new Set<number>();
+
+    const loadFrame = (idx: number) => {
+      if (isCancelled || framesRef.current.has(idx) || loadingSet.has(idx)) return;
+      loadingSet.add(idx);
+
       const img = new Image();
       img.decoding = 'async';
-      img.src = path;
+      img.src = framePaths[idx];
       img.onload = () => {
         if (isCancelled) return;
-        imgElements[idx] = img;
+        framesRef.current.set(idx, img);
+        loadingSet.delete(idx);
         loaded++;
-        setLoadedCount(loaded);
+
+        if (loaded % 20 === 0 || loaded === totalFramesCount) {
+          setLoadedCount(loaded);
+        }
 
         if (idx === 0 && !initialDrawn) {
           initialDrawn = true;
           renderScene(0);
         }
       };
-    });
+    };
+
+    // Load critical first 30 frames immediately
+    for (let i = 0; i < Math.min(30, framePaths.length); i++) {
+      loadFrame(i);
+    }
+
+    // Then progressively load rest in background batches of 20
+    const loadNextBatch = () => {
+      if (isCancelled || loaded >= framePaths.length) return;
+
+      // When user scrolls, prioritize loading frames near current position
+      const currentTarget = Math.floor(targetProgressRef.current * (totalFramesCount - 1));
+
+      const neededFrames = [];
+      let offset = 0;
+      let added = 0;
+      while (added < 20 && offset < totalFramesCount) {
+        const rightIdx = currentTarget + offset;
+        if (rightIdx < totalFramesCount && !framesRef.current.has(rightIdx) && !loadingSet.has(rightIdx)) {
+          neededFrames.push(rightIdx);
+          added++;
+        }
+
+        if (added >= 20) break;
+
+        const leftIdx = currentTarget - offset;
+        if (offset > 0 && leftIdx >= 0 && !framesRef.current.has(leftIdx) && !loadingSet.has(leftIdx)) {
+          neededFrames.push(leftIdx);
+          added++;
+        }
+        offset++;
+      }
+
+      neededFrames.forEach(idx => loadFrame(idx));
+      setTimeout(loadNextBatch, 100);
+    };
+
+    setTimeout(loadNextBatch, 200);
 
     // Hardware Refresh Rate (Hz) & Live Render FPS Detection
     const frameTimestamps: number[] = [];
-    let lastFpsSample = performance.now();
-    let frameCountSinceSample = 0;
+
     let hzDetected = false;
     let lastTime = performance.now();
 
@@ -227,13 +271,7 @@ export default function Home() {
       frameTimestamps.push(now);
       if (frameTimestamps.length > 70) frameTimestamps.shift();
 
-      frameCountSinceSample++;
-      if (now - lastFpsSample >= 500) {
-        const measuredFps = Math.round((frameCountSinceSample * 1000) / (now - lastFpsSample));
-        setLiveFps(measuredFps);
-        frameCountSinceSample = 0;
-        lastFpsSample = now;
-      }
+
 
       // Calculate hardware display Hz from inter-frame deltas (median filter)
       if (!hzDetected && frameTimestamps.length >= 45) {

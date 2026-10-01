@@ -10,32 +10,56 @@ export default function Preloader() {
     // Prevent scrolling while preloader is active
     document.body.style.overflow = 'hidden';
 
-    // Artificial progress up to 85% while waiting for massive assets
+    // Fast artificial progress for critical resources
     let currentProgress = 0;
     const interval = setInterval(() => {
-      currentProgress += Math.random() * 12;
-      if (currentProgress > 85) currentProgress = 85; 
+      currentProgress += Math.random() * 20;
+      if (currentProgress > 90) currentProgress = 90; 
       setProgress(Math.floor(currentProgress));
-    }, 300);
+    }, 100);
+
+    let isHandled = false;
 
     const handleLoad = () => {
+      if (isHandled) return;
+      isHandled = true;
       clearInterval(interval);
       setProgress(100);
       setTimeout(() => {
         setIsLoaded(true);
         document.body.style.overflow = ''; // Restore scrolling
         window.scrollTo(0, 0); // Ensure we start at the top
-      }, 600);
+      }, 800);
     };
 
-    if (document.readyState === 'complete') {
+    const checkReady = async () => {
+      try {
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+      } catch (e) {
+        // Ignore font loading errors
+      }
+      
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        handleLoad();
+      } else {
+        document.addEventListener('DOMContentLoaded', handleLoad);
+        window.addEventListener('load', handleLoad);
+      }
+    };
+
+    checkReady();
+
+    // Safety fallback: force dismiss after 2.5s maximum
+    const fallbackTimeout = setTimeout(() => {
       handleLoad();
-    } else {
-      window.addEventListener('load', handleLoad);
-    }
+    }, 2500);
 
     return () => {
       clearInterval(interval);
+      clearTimeout(fallbackTimeout);
+      document.removeEventListener('DOMContentLoaded', handleLoad);
       window.removeEventListener('load', handleLoad);
       document.body.style.overflow = '';
     };

@@ -33,10 +33,10 @@ export default function Page7Contact() {
         <div className="w-[120vw] h-[120vh] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#E2DCEF]/80 via-[#F4F4F8]/40 to-[#F4F4F8] blur-3xl animate-pulse" style={{ animationDuration: '10s' }} />
       </div>
 
-      <div className="relative z-10 w-full px-8 md:px-24 pt-32 md:pt-48 flex-grow flex flex-col">
+      <div className="relative z-10 w-full px-5 sm:px-8 md:px-24 pt-24 md:pt-48 flex-grow flex flex-col">
         
         {/* SPLIT LAYOUT */}
-        <div className="flex flex-col lg:flex-row w-full gap-16 lg:gap-8 mb-32 items-start justify-between">
+        <div className="flex flex-col lg:flex-row w-full gap-12 lg:gap-8 mb-20 md:mb-32 items-start justify-between">
           
           {/* LEFT: EDITORIAL TYPOGRAPHY */}
           <div className="w-full lg:w-1/2 flex flex-col pt-8">

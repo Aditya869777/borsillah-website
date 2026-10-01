@@ -58,7 +58,7 @@ export default function GlobalAIAssistant() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="fixed bottom-8 right-8 z-[100] flex flex-col items-end"
+      className="fixed bottom-4 right-4 md:bottom-8 md:right-8 z-[100] flex flex-col items-end"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -67,8 +67,8 @@ export default function GlobalAIAssistant() {
         onClick={handlePanelClick}
         initial={false}
         animate={{ 
-          width: isExpanded ? (typeof window !== 'undefined' && window.innerWidth < 768 ? 'calc(100vw - 64px)' : 380) : 160,
-          height: isExpanded ? 500 : 52,
+          width: isExpanded ? (typeof window !== 'undefined' && window.innerWidth < 768 ? Math.min(380, window.innerWidth - 32) : 380) : 160,
+          height: isExpanded ? (typeof window !== 'undefined' && window.innerHeight < 600 ? Math.min(480, window.innerHeight - 80) : 500) : 52,
           borderRadius: isExpanded ? 16 : 30,
           backgroundColor: isExpanded ? '#050505' : '#1A1A24', // Midnight Plum for the pill
           borderColor: isExpanded ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)',
@@ -112,11 +112,9 @@ export default function GlobalAIAssistant() {
                   <div className="w-1.5 h-1.5 rounded-full bg-[#9B111E] animate-pulse" />
                   <span className="font-beausite uppercase tracking-widest text-xs text-[#F5F5F0]">BORSILAH AI</span>
                 </div>
-                {hasInteracted && (
-                  <button onClick={handleClose} className="text-white/40 hover:text-white transition-colors p-1">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.5"/></svg>
-                  </button>
-                )}
+                <button onClick={handleClose} aria-label="Close Assistant" className="text-white/40 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/10">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.5"/></svg>
+                </button>
               </div>
 
               {/* CHAT AREA */}

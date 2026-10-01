@@ -1,10 +1,12 @@
 import { Cormorant_Garamond, DM_Mono, Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import CookieBanner from '@/components/CookieBanner';
+import dynamic from 'next/dynamic';
 import { ChatProvider } from '@/components/ChatContext';
 import Preloader from '@/components/Preloader';
 import type { Metadata, Viewport } from 'next';
-import GlobalAIAssistant from '@/components/GlobalAIAssistant';
+
+const CookieBanner = dynamic(() => import('@/components/CookieBanner'));
+const GlobalAIAssistant = dynamic(() => import('@/components/GlobalAIAssistant'));
 
 const playfair = Playfair_Display({
   subsets: ["latin"],

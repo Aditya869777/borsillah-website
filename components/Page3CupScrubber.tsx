@@ -62,15 +62,19 @@ const CUPS: CupData[] = [
 // – Layer 3: soft Sky Highlight (#78D7FF) breathing behind center
 // – Cursor: local influence field (soft deformation, not spotlight)
 // ─────────────────────────────────────────────────────────────
-function AtmosphericBg({ cursorX, cursorY }: { cursorX: number; cursorY: number }) {
+function AtmosphericBg({ cursorRef }: { cursorRef: React.MutableRefObject<{ x: number; y: number }> }) {
   const bgRef = useRef<HTMLCanvasElement>(null);
-  const cursorRef = useRef({ x: cursorX, y: cursorY });
   const smoothCursorRef = useRef({ x: 0.5, y: 0.5 });
   const rafRef = useRef<number | null>(null);
+  const isVisibleRef = useRef(false);
 
   useEffect(() => {
-    cursorRef.current = { x: cursorX, y: cursorY };
-  }, [cursorX, cursorY]);
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisibleRef.current = entry.isIntersecting;
+    }, { rootMargin: '200px' });
+    if (bgRef.current) observer.observe(bgRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = bgRef.current;
@@ -107,6 +111,10 @@ function AtmosphericBg({ cursorX, cursorY }: { cursorX: number; cursorY: number 
     };
 
     const render = (ts: number) => {
+      if (!isVisibleRef.current) {
+        rafRef.current = requestAnimationFrame(render);
+        return;
+      }
       const t = ts * 0.001; // seconds
 
       // Smooth cursor — very slow settle (creates natural swish on stop)
@@ -186,31 +194,77 @@ export default function Page3CupScrubber({ totalFrames = 240 }: { totalFrames?: 
   const [videoFailed, setVideoFailed] = useState<{ [key: number]: boolean }>({});
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
-  // Cursor tracking — normalized 0..1 for AtmosphericBg
-  const [cursorNorm, setCursorNorm] = useState({ x: 0.5, y: 0.5 });
+  const isVisibleRef = useRef(false);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
   useEffect(() => {
-    const onMove = (e: MouseEvent) =>
-      setCursorNorm({ x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight });
+    const observer = new IntersectionObserver(([entry]) => {
+      isVisibleRef.current = entry.isIntersecting;
+    }, { rootMargin: '200px' });
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    videoRefs.current.forEach((vid) => {
+      if (vid) {
+        if (isInPage3) {
+          vid.play().catch(() => {});
+        } else {
+          vid.pause();
+        }
+      }
+    });
+  }, [isInPage3]);
+
+  // Cursor tracking — normalized 0..1 for AtmosphericBg
+  const cursorNormRef = useRef({ x: 0.5, y: 0.5 });
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      cursorNormRef.current = { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight };
+    };
     window.addEventListener('mousemove', onMove, { passive: true });
     return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
-  // Preload 240 frames
+  // Preload 240 frames progressively
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let cancelled = false;
     const arr: (HTMLImageElement | null)[] = new Array(totalFrames).fill(null);
-    for (let i = 1; i <= totalFrames; i++) {
-      const img = new window.Image();
-      img.decoding = 'async';
-      img.src = `/cups_keyed/frame_${String(i).padStart(4, '0')}.png`;
-      img.onload = () => {
-        if (cancelled) return;
-        arr[i - 1] = img;
-        if (i === 1 && currentProgressRef.current === 0) drawFrame(0);
-      };
-      img.onerror = () => { if (!cancelled) arr[i - 1] = null; };
-    }
     imagesRef.current = arr;
+
+    const loadBatch = async (start: number, end: number) => {
+      const promises = [];
+      for (let i = start; i <= end; i++) {
+        if (i > totalFrames) break;
+        promises.push(new Promise<void>((resolve) => {
+          const img = new window.Image();
+          img.decoding = 'async';
+          img.src = `/cups_keyed/frame_${String(i).padStart(4, '0')}.png`;
+          img.onload = () => {
+            if (!cancelled) arr[i - 1] = img;
+            resolve();
+          };
+          img.onerror = () => {
+            if (!cancelled) arr[i - 1] = null;
+            resolve();
+          };
+        }));
+      }
+      await Promise.all(promises);
+    };
+
+    const loadAll = async () => {
+      await loadBatch(1, 30);
+      if (cancelled) return;
+      for (let i = 31; i <= totalFrames; i += 20) {
+        await loadBatch(i, i + 19);
+        if (cancelled) return;
+      }
+    };
+
+    loadAll();
     return () => { cancelled = true; };
   }, [totalFrames]);
 
@@ -267,6 +321,10 @@ export default function Page3CupScrubber({ totalFrames = 240 }: { totalFrames?: 
     };
 
     const loop = () => {
+      if (!isVisibleRef.current) {
+        animFrameIdRef.current = requestAnimationFrame(loop);
+        return;
+      }
       // EXTREMELY TIGHT INERTIA: factor 0.45 (stops instantly when scroll stops)
       // Frame mapping: 240 frames spread over 80% of scroll progress.
       // At 480vh container → ~304vh physical scroll for the full animation.
@@ -320,7 +378,7 @@ export default function Page3CupScrubber({ totalFrames = 240 }: { totalFrames?: 
 
         {/* ── z-0: Atmospheric background canvas ── */}
         <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-          <AtmosphericBg cursorX={cursorNorm.x} cursorY={cursorNorm.y} />
+          <AtmosphericBg cursorRef={cursorNormRef} />
         </div>
 
         {/* ── z-10: FLAVOR header — top of viewport, below product ── */}
@@ -434,8 +492,12 @@ export default function Page3CupScrubber({ totalFrames = 240 }: { totalFrames?: 
                       >
                         {hasVideo ? (
                           <video
+                            ref={(el) => {
+                              videoRefs.current[cup.id] = el;
+                            }}
                             src={cup.video}
-                            autoPlay loop muted playsInline
+                            loop muted playsInline
+                            preload={isInPage3 ? 'auto' : 'none'}
                             onError={() => setVideoFailed((prev) => ({ ...prev, [cup.id]: true }))}
                             className={`${cupSizeClasses} h-auto object-contain transition-transform duration-500`}
                           />
