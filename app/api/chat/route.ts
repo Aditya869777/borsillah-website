@@ -78,10 +78,10 @@ Never output any thinking, reasoning steps, analysis, or internal notes. Your re
 // ─────────────────────────────────────────────────────────────────────────────
 // Models — confirmed working on OpenRouter free tier
 const MODELS_TO_TRY = [
-  'meta-llama/llama-3.1-8b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
-  'qwen/qwen2.5-7b-instruct:free',
-  'google/gemma-2-9b-it:free'
+  'google/gemma-4-31b-it:free',
+  'qwen/qwen3.8-27b:free',
+  'liquid/lfm-2.5-2.6b:free',
+  'openrouter/free'
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -203,7 +203,7 @@ export async function POST(req: Request) {
             model,
             messages: fullMessages,
             temperature: 0.4,
-            max_tokens: 250,
+            max_tokens: 500,
           }),
         });
 
